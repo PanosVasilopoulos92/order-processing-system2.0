@@ -1,0 +1,133 @@
+# Docker Compose file version — uses the modern "services" top-level key
+# (no version field needed for Compose V2+).
+
+services:
+
+  # ========================== APPLICATION ==========================
+  app:
+    # Builds the Docker image from the Dockerfile in the current directory.
+    build: .
+
+    # Gives the container a fixed name for easy identification in logs and commands.
+    container_name: ops-app
+
+    # Maps host port 8080 to container port 8080.
+    # Format: "HOST_PORT:CONTAINER_PORT"
+    ports:
+      - "8080:8080"
+
+    # Environment variables injected into the container at runtime.
+    # Spring Boot auto-maps these to application properties
+    # (e.g., SPRING_DATASOURCE_URL -> spring.datasource.url).
+    environment:
+      # JDBC connection string pointing to the 'db' service on the Docker network.
+      # 'db' resolves to the database container's IP via Docker's internal DNS.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/order_processing_system
+
+      # Database credentials — must match POSTGRES_USER and POSTGRES_PASSWORD below.
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-ops_user}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-ops_secret}
+
+      # Hibernate DDL strategy: 'validate' is the industry standard for production.
+      # It checks that the schema matches the entities but never modifies the database.
+      # Use 'update' during early development if you want auto-schema generation.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${DDL_AUTO:-update}
+
+      # Tells Hibernate which SQL dialect to generate for PostgreSQL.
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      # Secret key used for signing and verifying JWT tokens.
+      # MUST be overridden in production via a .env file or secrets manager.
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-to-a-secure-key-at-least-256-bits-long}
+
+    # Ensures the database is fully ready before starting the application.
+    # 'service_healthy' waits for the db's health check to pass, not just for
+    # the container to start — preventing "connection refused" errors on boot.
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Connects the app to the custom bridge network (see below).
+    networks:
+      - ops-network
+
+    # Restart policy: automatically restarts the container if it crashes,
+    # but NOT if it was manually stopped. Suitable for production deployments.
+    restart: unless-stopped
+
+
+  # ========================== DATABASE ==========================
+  db:
+    # Official PostgreSQL 17 Alpine image — Alpine-based images are ~5x smaller
+    # than Debian-based ones, reducing download time and attack surface.
+    image: postgres:17-alpine
+
+    # Gives the container a fixed name for easy reference.
+    container_name: ops-porstgres-db
+
+    # Maps host port 5432 to the container's PostgreSQL port.
+    # Allows connecting from the host with tools like pgAdmin, DBeaver, or psql.
+    ports:
+      - "5432:5432"
+
+    # PostgreSQL configuration via environment variables.
+    environment:
+      # Name of the database created automatically on first startup.
+      POSTGRES_DB: order_processing_system
+
+      # Superuser credentials for the database.
+      # Uses variables from .env file with secure defaults for local development.
+      POSTGRES_USER: ${DB_USER:-ops_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ops_secret}
+
+      # Sets the default encoding and collation for the database.
+      # UTF-8 ensures proper handling of international characters.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+
+    # Mounts a named volume to persist database data across container restarts.
+    # Without this, all data would be lost every time the container is removed.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    # Health check — periodically verifies that PostgreSQL is accepting connections.
+    # The app's depends_on uses this to wait for the database to be truly ready,
+    # not just for the container process to be running.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ops_user} -d order_processing_system"]
+      interval: 5s      # Check every 5 seconds.
+      timeout: 3s        # Fail the check if no response within 3 seconds.
+      retries: 5         # Mark as unhealthy after 5 consecutive failures.
+      start_period: 10s  # Grace period — ignore failures during initial startup.
+
+    # Connects the database to the same custom network as the app.
+    networks:
+      - ops-network
+
+    # Restart policy: same as the app — auto-restart on crash.
+    restart: unless-stopped
+
+    # Resource limits — prevents the database from consuming all host resources.
+    # Adjust these values based on your machine's capacity.
+    deploy:
+      resources:
+        limits:
+          memory: 512M   # Maximum memory the container can use.
+          cpus: "1.0"    # Maximum CPU cores the container can use.
+
+
+# ========================== NETWORKS ==========================
+# Custom bridge network — isolates these containers from other Docker workloads
+# on the host. Containers on the same network can reach each other by service
+# name (e.g., the app reaches PostgreSQL at hostname 'db').
+networks:
+  ops-network:
+    driver: bridge
+
+
+# ========================== VOLUMES ==========================
+# Named volume for PostgreSQL data persistence.
+# Managed by Docker — data survives container removal and recreation.
+# Use 'docker volume rm pgdata' to delete it (destroys all database data).
+volumes:
+  pgdata:
+    driver: local

@@ -1,0 +1,31 @@
+# Git history — not needed in the image, and can be very large.
+.git/
+
+# Maven build output — the image builds its own JAR from source.
+target/
+
+# Maven wrapper files — not needed since the build stage uses a Maven base image.
+mvnw
+mvnw.cmd
+.mvn/
+
+# IDE configuration files — editor-specific, not relevant at runtime.
+.idea/
+*.iml
+.vscode/
+
+# Log files — runtime artifacts that should not be baked into the image.
+logs/
+*.log
+
+# Environment files — may contain secrets; must never be embedded in an image.
+.env
+.env.*
+
+# Docker files themselves — not needed inside the container.
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation — not needed at runtime.
+*.md
