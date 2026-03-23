@@ -3,6 +3,7 @@ package org.viators.orderprocessingsystem.product.dto.request;
 import jakarta.validation.constraints.*;
 import org.viators.orderprocessingsystem.common.enums.CategoryEnum;
 import org.viators.orderprocessingsystem.product.ProductT;
+import org.viators.orderprocessingsystem.product.command.model.CreateProductCommand;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -37,5 +38,15 @@ public record CreateProductRequest(
                 Optional.ofNullable(description).ifPresent(productT::setDescription);
 
                 return productT;
+        }
+
+        public CreateProductCommand toCommand() {
+                return new CreateProductCommand(
+                    name,
+                    description,
+                    price,
+                    category,
+                    stockQuantity
+                );
         }
 }

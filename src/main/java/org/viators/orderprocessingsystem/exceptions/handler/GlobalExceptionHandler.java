@@ -1,5 +1,6 @@
 package org.viators.orderprocessingsystem.exceptions.handler;
 
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -153,6 +154,20 @@ public class GlobalExceptionHandler {
                 ErrorCodeEnum.DATA_INTEGRITY_VIOLATION,
                 "A data integrity constraint was violated. Please check your request for duplicate or invalid references.",
                 request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {
+
+        log.error("Concurrent resource modification violation - Path: {} - Cause: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse error = ErrorResponse.of(
+            HttpStatus.CONFLICT.value(),
+            ErrorCodeEnum.CONCURRENT_RESOURCE_MODIFICATION,
+            "Another user has modified the same resource",
+            request.getRequestURI()
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
