@@ -49,40 +49,45 @@ public class ProductService {
 
     public Page<ProductDetailsResponse> getAllActiveProducts(Pageable pageable) {
         Page<ProductT> results = productRepository.findAllByStatus(StatusEnum.ACTIVE, pageable);
-        return results.map(ProductDetailsResponse::from);
+//        return results.map(ProductDetailsResponse::from);
+        return null;
     }
 
     public ProductDetailsResponse getProduct(String productUuid) {
         ProductT product = productRepository.findByUuid(productUuid)
             .orElseThrow(() -> new ResourceNotFoundException("Product", "uuid", productUuid));
 
-        return ProductDetailsResponse.from(product);
+//        return ProductDetailsResponse.from(product);
+        return null;
     }
 
     @Transactional
     public ProductSummaryResponse create(CreateProductRequest request) {
-        if (productRepository.existsByNameIgnoreCase(request.name())) {
-            throw new DuplicateResourceException("Name already exists");
-        }
+//        if (productRepository.existsByNameIgnoreCase(request.name())) {
+//            throw new DuplicateResourceException("Name already exists");
+//        }
+//
+//        ProductT entity = request.toEntity();
+//        entity = productRepository.save(entity);
+//
+//        return ProductSummaryResponse.from(entity);
 
-        ProductT entity = request.toEntity();
-        entity = productRepository.save(entity);
-
-        return ProductSummaryResponse.from(entity);
+        return null;
     }
 
     @Transactional
     public ProductSummaryResponse update(String productUuid, UpdateProductRequest request) {
 
-        ProductT product = productRepository.findByUuidAndStatus(productUuid, StatusEnum.ACTIVE)
-            .orElseThrow(() -> new ResourceNotFoundException("Product", "uuid", productUuid));
-
-        if (productRepository.existsByNameIgnoreCase(request.name())) {
-            throw new DuplicateResourceException("Product", "name", request.name());
-        }
-
-        request.updateResource(product);
-        return ProductSummaryResponse.from(product);
+//        ProductT product = productRepository.findByUuidAndStatus(productUuid, StatusEnum.ACTIVE)
+//            .orElseThrow(() -> new ResourceNotFoundException("Product", "uuid", productUuid));
+//
+//        if (productRepository.existsByNameIgnoreCase(request.name())) {
+//            throw new DuplicateResourceException("Product", "name", request.name());
+//        }
+//
+//        request.updateResource(product);
+//        return ProductSummaryResponse.from(product);
+        return null;
     }
 
     @Transactional
@@ -129,8 +134,10 @@ public class ProductService {
             specs = specs.and(ProductSpecs.hasPriceBetween(request.minPrice(), request.maxPrice()));
         }
 
-        return productRepository.findAll(specs, pageable)
-            .map(ProductDetailsResponse::from);
+//        return productRepository.findAll(specs, pageable)
+//            .map(ProductDetailsResponse::from);
+
+        return null;
     }
 
 }
