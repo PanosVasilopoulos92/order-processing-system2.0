@@ -11,7 +11,7 @@ public record RegisterUserRequest(
         String username,
 
         @NotBlank(message = "Email is required")
-        @Email(message = "Email must be a valid email address")
+        @Email(message = "Email must be a valid newEmail address")
         String email,
 
         @NotBlank(message = "Password is required")
